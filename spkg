@@ -1,0 +1,490 @@
+#!/bin/bash
+################################################################################
+# Simple Package Manager
+#
+# Style Guide: https://google.github.io/styleguide/shellguide.html
+
+################################################################################  
+#######################################
+## CONSTANTS
+__VERSION__="0.0.1"
+readonly __VERSION__
+__NAME__="spkg"
+readonly __NAME__
+__DESCRIPTION__="A simple package manager"
+readonly __DESCRIPTION__
+## END CONSTANTS
+#######################################
+
+# These are checked in order of precedence
+CONFIG_FILES=(
+  "./${__NAME__}.conf"
+  "${HOME}/.config/${__NAME__}/${__NAME__}.conf"
+  "/etc/${__NAME__}/${__NAME__}.conf"
+)
+
+#######################################
+# Prints program version
+# Globals:
+#   __NAME__
+#   __VERSION__
+# Arguments:
+#   NONE
+# Returns:
+#   NONE
+#######################################
+show_version() {
+  printf '%s %s\n' "${__NAME__}" "${__VERSION__}"
+  return
+}
+
+#######################################
+# Parse a delimated string, and returns a globally parsable array
+# Globals:
+#   NONE
+# Arguments:
+#   $1: delimated string
+# Returns:
+#   newline delimated string
+#######################################
+parse_to_array() {
+  local string
+  local return_array
+  string="$1"
+  return_array=()
+
+  # local regex_comma="\\w,\\s*"
+  local regex_comma="(\\w|\\s|\\/)*,(\\w|\\s|\\/)*"
+  local regex_colon="(\\w|\\s|\\/)*:(\\w|\\s|\\/)*"
+  local regex_semicolon="(\\w|\\s|\\/)*;(\\w|\\s|\\/)*"
+
+  if [[ "${string}" =~ $regex_comma ]]; then
+    Temporary_IFS=","
+  elif [[ "${string}" =~ $regex_colon ]]; then
+    Temporary_IFS=":"
+  elif [[ "${string}" =~ $regex_semicolon ]]; then
+    Temporary_IFS=";"
+  else
+    Temporary_IFS=$'\n'
+  fi
+  IFS="${Temporary_IFS}" read -ra return_array <<<"${string}"
+
+  # bash can't return anything in the normal sense
+  # this includes variables, strings, integers, arrays, etc
+  # so the best method is to echo a newline delimated string
+  # this is "globally" parsable
+  # meaning that we don't have to do anything special to get an array from it
+  # I.E. readarray -t array <<< "$(parse_to_array "${foo}")"
+  printf "%s\\n" "${return_array[@]## }"
+  return 0
+}
+
+
+#######################################
+# Prints help
+# Globals:
+#   __NAME__
+# Arguments:
+#   $1
+#     The help section to display
+# Returns:
+#   NONE
+#######################################
+# shellcheck disable=SC2120
+show_help() {
+
+  case $1 in
+    "add")
+      cat <<_EOF_
+foo
+_EOF_
+      return 0
+      ;;
+    "del")
+      cat <<_EOF_
+foo
+_EOF_
+      return 0
+      ;;
+    "list")
+      cat <<_EOF_
+foo
+_EOF_
+      return 0
+      ;;
+
+    *)
+      cat <<_EOF_
+$(show_version)
+
+${__DESCRIPTION__}
+
+USAGE:
+    ${__NAME__} <COMMAND>
+
+FLAGS:
+    -h, --help       Prints help information.
+    -V, --version    Prints version information.
+
+COMMANDS:
+    add        Install packages.
+    del        Delete packages.
+    update     Update existing packages.
+    list       List package information.
+    help       Prints help information.
+    version    Prints version information.
+_EOF_
+      return 0
+      ;;
+  esac
+  return 0
+}
+
+#######################################
+# Sets the debug level
+# Globals:
+#   None
+# Arguments:
+#   debug_level
+#     The level of debug to set
+# Returns:
+#   NONE
+#######################################
+set_debug(){
+  local debug_level
+  debug_level="${1:-0}"
+  if (( debug_level < 1 )); then
+    return 0
+  fi
+  exec 3>&1
+  set_verbose "3"
+  if (( debug_level >= 1 )); then
+    return 0
+  fi
+}
+
+#######################################
+# Sets the verbosity level
+# Globals:
+#   None
+# Arguments:
+#   verbosity
+#     The level of verbosity to set
+# Returns:
+#   NONE
+#######################################
+set_verbose(){
+  local verbosity
+  verbosity="${1:-0}"
+  if (( verbosity < 1 ));  then
+    return 0
+  fi
+  exec 4>&1
+  if (( verbosity == 1 )); then
+    return 0
+  fi
+  exec 5>&1
+  if (( verbosity == 2)); then
+    return 0
+  fi
+  exec 6>&1
+}
+#######################################
+# Converts string to lowercase
+# Globals:
+#   None
+# Arguments:
+#   string
+#     string to convert
+# Returns:
+#   string
+#######################################
+to_lower() {
+  printf "%s" "${*,,}"
+}
+
+#######################################
+# Converts string to uppercase
+# Globals:
+#   None
+# Arguments:
+#   string
+#     string to convert
+# Returns:
+#   string
+#######################################
+to_upper() {
+  printf "%s" "${*^^}"
+}
+
+# TODO: add proper function header
+# TODO: try to remove dependencies, replace with pure bash
+git_latest_release() {
+  # Get latest release from GitHub api
+  _curl "https://api.github.com/repos/$1/releases/latest" |
+    grep '"tag_name":' |                                            # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
+}
+
+_wget(){
+  true
+  #TODO: add code to differentiate between wget and curl
+}
+
+_curl() {
+  #TODO: add code to differentiate between wget and curl
+
+  # busybox wget only has the short options
+  ${BINARY_WGET} -q -O - "${1}"
+}
+
+apply_shell_expansion() {
+  local file
+  local data
+  local delimiter
+  local _command
+  file="$1"
+  data=$(< "$file")
+  delimiter="__apply_shell_expansion_delimiter__"
+  _command="cat <<$delimiter"$'\n'"$data"$'\n'"$delimiter"
+  eval "${_command}"
+}
+
+default_config(){
+  cat <<_EOF_
+DIRECTORY_BIN="\${HOME}/.local/bin"
+DIRECTORY_MAN="\${HOME}/.local/share/man"
+DIRECTORY_BASH_AC="\${HOME}/.local/share/bash-autocomplete"
+DIRECTORY_PKG="\${HOME}/opt"
+DIRECTORY_PKG_DEFS="\${HOME}/.config/${NAME}/pkgs"
+# wget *or* curl
+BINARY_WGET="wget"
+BINARY_TAR="tar"
+BINARY_UNZIP="unzip"
+_EOF_
+}
+
+gen_default_config(){
+  mkdir -p "${HOME}/.config/${NAME}/pkgs"
+  default_config > "${HOME}/.config/${NAME}/${NAME}.conf"
+}
+
+eval "$(default_config)"
+
+
+die(){
+  printf "ERROR: %s\n" "${1}" >&2
+  exit 1
+}
+
+preflight(){
+    local -A Deps=( 
+        [wget]="${BINARY_WGET%% *}" 
+        [tar]="${BINARY_TAR%% *}"
+        [unzip]="${BINARY_UNZIP%% *}"
+    )
+
+    for key in "${!Deps[@]}"; do
+        BinaryName="${Deps[$key]}"
+        printf "[DEBUG] Checking dependency \`%s\`\n" "${key}" >&3 2>&1
+        if ! command -V "${BinaryName}" >/dev/null 2>&1; then
+            die "Could not find \`${key}\` - Check your configuration"
+        fi
+        printf "[DEBUG] \`%s\` okay\n" "${BinaryName}" >&3 2>&1
+    done   
+}
+
+# shellcheck disable=SC2120
+cat(){
+  IFS=''
+  if [[ -z "$*" ]]; then
+    mapfile -d '' data
+    printf "%s" "${data[0]}"
+  else
+    for i in "$@"; do
+      mapfile -d '' data < "${i}"
+      printf "%s" "${data[0]}"
+    done
+  fi
+}
+
+command_add(){
+  # get config 
+  printf "add!\n"
+  return 0
+}
+
+command_del(){
+  printf "del!\n"
+  return 0
+}
+
+command_update(){
+  printf "update!\n"
+  return 0
+}
+
+command_list(){
+
+  # OPTIONS
+  # all - all configured
+  # installed - iterate of packages directory
+  # info - print info of specific package (maybe seperate sub-command?)
+  printf "list!\n"
+  return 0
+}
+
+main(){
+  local argv
+  # argc is the count of arguments
+  local argc
+  local debug
+  local verbose
+  local subcommand
+  local return_value
+  return_value="0"
+
+
+  argv=("$@")
+  argc=${#argv[@]}
+
+  shopt -s extglob;
+
+  # File descriptors:
+  # 0: standard in
+  # 1: standard out
+  # 2: standard error
+  # 3: debug
+  # 4: verbose 1
+  # 5: verbose 2
+  # 6: verbose 3
+  # set default handles to /dev/null (will error if they don't exist at all)
+  exec 3>/dev/null
+  exec 4>/dev/null
+  exec 5>/dev/null
+  exec 6>/dev/null
+
+  if [[ "${argv[0]}" == "-V" ]] || \
+     [[ "${argv[0]}" == "--version" ]] || \
+     [[ "${argv[0]}" == "version" ]]; then
+    show_version
+    return "$?"
+  fi
+ 
+  if [[ -z "${argv[0]}" ]] || \
+     [[ "${argv[0]}" == "-h" ]] || \
+     [[ "${argv[0]}" == "--help" ]] || \
+     [[ "${argv[0]}" == "help" ]]; then
+    show_help
+    return "$?"
+  fi
+
+  # Handle compressed short options
+  re="(^| )\\-[[:alnum:]]{2,}"; # regex to detect shortoptions
+  # we evaluate this as a long string, thus ${argv[*]}, instead of ${argv[@]}
+  if [[ "${argv[*]}" =~ $re ]]; then
+    compiled_args=()
+    for ((i=0; i<argc; i++)); do
+      if [[ "${argv[$i]}" =~ $re ]]; then
+        compressed_args="${argv[$i]#*-}"
+        for ((r=0; r<${#compressed_args}; r++)); do
+          compiled_args+=("-${compressed_args:$r:1}")
+        done
+        shift
+        compiled_args+=("$@")
+        ## recurse
+        "${FUNCNAME[0]}" "${compiled_args[@]}"
+        ## we "pass" the exit code back up the recursions
+        return $?;
+      fi
+      compiled_args+=("${argv[$i]}");
+      shift;
+    done
+    return 0;
+  fi
+
+  while :; do
+    case $1 in
+      "add")
+        shift
+        subcommand="add"
+        break
+      ;;
+      "del")
+        shift
+        subcommand="del"
+        break
+      ;;
+      "update")
+        shift
+        subcommand="update"
+        break
+      ;;
+      "list")
+        shift
+        subcommand="list"
+        break
+      ;;
+      "-d"|"--debug")
+        ((debug++))
+        ;;
+      --debug=?*)
+        debug="${1#*=}"
+        ;;
+      "-v"|"--verbose")
+        ((verbose++))
+        ;;
+      --)              # End of all options.
+        shift
+        break
+        ;;
+      -?*)
+        printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+        ;;
+      *)        # Default case: No more options, so break out of the loop.
+        break
+    esac
+    shift
+  done
+
+  set_verbose "${verbose:-0}"
+  set_debug "${debug:-0}"
+
+  for file in "${CONFIG_FILES[@]}"; do
+    # Check if file exists, source it, then break. Ensure only the first found
+    # config file is loaded, with the user's personal config taking precedence.
+    if [[ -e "${file}" ]]; then
+      printf "[DEBUG] Sourcing file: %s\n" "${file}" >&3 2>&1
+      # the source is a config file, so we don't need shellcheck to check it
+      # shellcheck source=/dev/null
+      source "${file}"
+      break
+    else
+      printf "[DEBUG] no config files found" >&3 2>&1
+    fi
+  done
+
+  # we don't care about prereqs if they are only printing help or the version
+  # so do that now
+  preflight
+
+  if [[ -n "${subcommand}" ]]; then
+    "command_${subcommand}" "$@"
+    return_value="$?"
+  fi
+
+  cat <<_EOF_ >&3 2>&1
+
+--DEBUG INFO--
+DIRECTORY_BIN="${DIRECTORY_BIN}"
+DIRECTORY_MAN="${DIRECTORY_MAN}"
+DIRECTORY_BASH_AC="${DIRECTORY_BASH_AC}"
+DIRECTORY_PKG="${DIRECTORY_PKG}"
+DIRECTORY_PKG_DEFS="${DIRECTORY_PKG_DEFS}"
+BINARY_WGET="${BINARY_WGET}"
+BINARY_TAR="${BINARY_TAR}"
+BINARY_UNZIP="${BINARY_UNZIP}"
+_EOF_
+  exit "${return_value}"
+}
+main "$@"
