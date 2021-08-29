@@ -40,6 +40,189 @@ show_version() {
   return
 }
 
+
+#######################################
+# Initializes the logging system
+# Globals:
+#   Creates a set of file descriptors
+#     initialized to point to /dev/null
+#   - {DEBUG}
+#   - {INFORMATION}
+#   - {WARNING}
+#   - {ERROR}
+#   - {FATAL}
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+initialize_logging_system()
+{
+  for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
+    # https://stackoverflow.com/a/8297755/2628314
+    if ! eval "exec ${FD}>/dev/null"; then
+      printf 'Failed to create FD %s. Aborting\n' "${FD}" >&2
+      exit 1
+    fi
+  done
+  return 0
+}
+
+
+#######################################
+# Shutdown the logging system
+# Globals:
+#   Closes the set of file descriptors
+#     created by initialize_logging_system
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+shutdown()
+{
+  for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
+    if ! eval "printf '\n' >&\$${FD}" ; then
+      if ! eval "exec ${FD}>&-" ; then
+        printf 'Failed to shutdown fd%s\n' "${FD}" >&2
+      fi
+    fi
+  done
+
+  return 0
+}
+
+
+#######################################
+# Convert logging levels to numbers
+# Globals:
+#   Used the set of file descriptors
+#     created by initialize_logging_system
+# Arguments:
+#   Level Name or Number: String
+#     Valid inputs:
+#       OFF           0
+#       DEBUG         10
+#       INFORMATION   20
+#       WARNING       30
+#       ERROR         40
+#       FATAL         50
+# Returns:
+#   Level Number: Integer
+#######################################
+logging_name_to_level_number()
+{
+  if (( $# != 1 )); then
+    printf 'logging_name_to_level_number must be called with a logging level. Aborting\n' >&2
+    exit 1
+  fi
+
+  case "$1" in
+    OFF|0)
+      printf '0\n'
+      ;;
+
+    DEBUG|10)
+      printf '10\n'
+      ;;
+
+    INFORMATION|20)
+      printf '20\n'
+      ;;
+
+    WARNING|30)
+      printf '30\n'
+      ;;
+
+    ERROR|40)
+      printf '40\n'
+      ;;
+
+    FATAL|50)
+      printf '50\n'
+      ;;
+
+    *)
+      printf 'Unexpected level name\n' >&2
+      return 1
+      ;;
+
+  esac
+
+  return 0
+}
+
+
+#######################################
+# Set the logging level
+# Globals:
+#   Used the set of file descriptors
+#     created by initialize_logging_system
+# Arguments:
+#   Level Name or Number: String
+#     Valid inputs:
+#       OFF
+#       DEBUG
+#       INFORMATION
+#       WARNING
+#       ERROR
+#       FATAL
+# Returns:
+#   None
+# Useful information:
+#   Logging level description
+#     OFF          No logging messages to be sent to console
+#     DEBUG        Information useful for debugging
+#     INFORMATION  Information useful to the user
+#     WARNING      Something unexpected occured
+#     ERROR        Serious problem was handled
+#     FATAL        Something went wrong and could not be recovered
+# Usage:
+#   initialize_logging_system
+#   trap shutdown EXIT
+#   set_logging_level WARNING
+#######################################
+set_logging_level()
+{
+  if (( $# != 1 )); then
+    printf 'set_logging_level must be called with a logging level. Aborting\n' >&2
+    exit 1
+  fi
+
+  local LevelNumber
+  if ! LevelNumber="$(logging_name_to_level_number "$1")"; then
+    printf 'set_logging_level failed to convert name to level number: %s. Aborting\n' "$1" >&2
+    exit 1
+  fi
+  readonly LevelNumber
+
+  # Sets all logging file descriptors to /dev/null
+  if ! initialize_logging_system; then
+    printf 'Failed to initialize/ reset the logging system. Aborting.\n'
+    exit 1
+  fi
+
+  # No logging messages should be emitted
+  if (( LevelNumber == 0 )); then
+    return 0
+  fi
+
+  for FD in DEBUG INFORMATION WARNING ERROR FATAL; do
+    if ! TransposedLevelNumber="$(logging_name_to_level_number "${FD}")"; then
+      printf 'Invald logging level supplied: %s. Aborting.\n' "${FD}" >&2
+      exit 1
+    fi
+
+    if (( TransposedLevelNumber >= LevelNumber )); then
+      if ! eval "exec {${FD}}>&2"; then
+        printf 'failed to redirect FD%s\n' "${FD}" >&2
+      fi
+    fi
+  done
+  return 0
+}
+
+
 #######################################
 # Parse a delimated string, and returns a globally parsable array
 # Globals:
@@ -150,59 +333,7 @@ _EOF_
   return 0
 }
 
-#######################################
-# Sets the debug level
-# Globals:
-#   None
-# Arguments:
-#   debug_level
-#     The level of debug to set
-# Returns:
-#   NONE
-#######################################
-set_debug(){
-  local debug_level
-  debug_level="${1:-0}"
-  readonly debug_level
 
-  if (( debug_level < 1 )); then
-    return 0
-  fi
-  exec 3>&1
-  set_verbose "3"
-  if (( debug_level >= 1 )); then
-    return 0
-  fi
-}
-
-#######################################
-# Sets the verbosity level
-# Globals:
-#   None
-# Arguments:
-#   verbosity
-#     The level of verbosity to set
-# Returns:
-#   NONE
-#######################################
-set_verbose(){
-  local verbosity
-  verbosity="${1:-0}"
-  readonly verbosity
-
-  if (( verbosity < 1 ));  then
-    return 0
-  fi
-  exec 4>&1
-  if (( verbosity == 1 )); then
-    return 0
-  fi
-  exec 5>&1
-  if (( verbosity == 2)); then
-    return 0
-  fi
-  exec 6>&1
-}
 #######################################
 # Converts string to lowercase
 # Globals:
@@ -300,11 +431,11 @@ preflight(){
 
     for key in "${!Deps[@]}"; do
         BinaryName="${Deps[$key]}"
-        printf "[DEBUG] Checking dependency \`%s\`\n" "${key}" >&3 2>&1
-        if ! command -V "${BinaryName}" >/dev/null 2>&1; then
+        printf "[DEBUG] Checking dependency \`%s\`\n" "${key}" >&"${DEBUG}"
+        if ! command -V "${BinaryName}" >/dev/null; then
             die "Could not find \`${key}\` - Check your configuration"
         fi
-        printf "[DEBUG] \`%s\` okay\n" "${BinaryName}" >&3 2>&1
+        printf "[DEBUG] \`%s\` okay\n" "${BinaryName}" >&"${DEBUG}"
     done
 }
 
@@ -352,8 +483,8 @@ main(){
   local argv
   # argc is the count of arguments
   local argc
-  local debug
-  local verbose
+  local debug_level
+  local verbose_level
   local subcommand
   local return_value
   return_value="0"
@@ -363,20 +494,6 @@ main(){
   argc=${#argv[@]}
 
   shopt -s extglob;
-
-  # File descriptors:
-  # 0: standard in
-  # 1: standard out
-  # 2: standard error
-  # 3: debug
-  # 4: verbose 1
-  # 5: verbose 2
-  # 6: verbose 3
-  # set default handles to /dev/null (will error if they don't exist at all)
-  exec 3>/dev/null
-  exec 4>/dev/null
-  exec 5>/dev/null
-  exec 6>/dev/null
 
   if [[ "${argv[0]}" == "-V" ]] || \
      [[ "${argv[0]}" == "--version" ]] || \
@@ -440,20 +557,20 @@ main(){
         break
       ;;
       "-d"|"--debug")
-        ((debug++))
+        ((debug_level++))
         ;;
       --debug=?*)
-        debug="${1#*=}"
+        debug_level="${1#*=}"
         ;;
       "-v"|"--verbose")
-        ((verbose++))
+        ((verbose_level++))
         ;;
       --)              # End of all options.
         shift
         break
         ;;
       -?*)
-        printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+        printf 'WARN: Unknown option (ignored): %s\n' "$1" >&"${WARNING}"
         ;;
       *)        # Default case: No more options, so break out of the loop.
         break
@@ -461,20 +578,19 @@ main(){
     shift
   done
 
-  set_verbose "${verbose:-0}"
-  set_debug "${debug:-0}"
+  set_logging_level "${debug_level}"
 
   for file in "${CONFIG_FILES[@]}"; do
     # Check if file exists, source it, then break. Ensure only the first found
     # config file is loaded, with the user's personal config taking precedence.
     if [[ -e "${file}" ]]; then
-      printf "[DEBUG] Sourcing file: %s\n" "${file}" >&3 2>&1
+      printf "[DEBUG] Sourcing file: %s\n" "${file}" >&"${DEBUG}"
       # the source is a config file, so we don't need shellcheck to check it
       # shellcheck source=/dev/null
       source "${file}"
       break
     else
-      printf "[DEBUG] no config files found" >&3 2>&1
+      printf "[DEBUG] no config files found\n" >&"${DEBUG}"
     fi
   done
 
@@ -487,7 +603,7 @@ main(){
     return_value="$?"
   fi
 
-  cat <<_EOF_ >&3 2>&1
+  cat <<_EOF_ >&"${DEBUG}"
 
 --DEBUG INFO--
 DIRECTORY_BIN="${DIRECTORY_BIN}"
@@ -501,4 +617,22 @@ BINARY_UNZIP="${BINARY_UNZIP}"
 _EOF_
   exit "${return_value}"
 }
+
+
+#######################################
+# Clean up resources
+#######################################
+application_cleanup()
+{
+    shutdown
+}
+
+
+initialize_logging_system
+
+set_logging_level "WARNING"
+
 main "$@"
+
+trap application_cleanup EXIT
+
