@@ -85,7 +85,7 @@ parse_to_array() {
   # this is "globally" parsable
   # meaning that we don't have to do anything special to get an array from it
   # I.E. readarray -t array <<< "$(parse_to_array "${foo}")"
-  printf "%s\\n" "${return_array[@]## }"
+  printf "%s\n" "${return_array[@]## }"
   return 0
 }
 
