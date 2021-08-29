@@ -4,7 +4,7 @@
 #
 # Style Guide: https://google.github.io/styleguide/shellguide.html
 
-################################################################################  
+################################################################################
 #######################################
 ## CONSTANTS
 __VERSION__="0.0.1"
@@ -292,8 +292,8 @@ die(){
 }
 
 preflight(){
-    local -A Deps=( 
-        [wget]="${BINARY_WGET%% *}" 
+    local -A Deps=(
+        [wget]="${BINARY_WGET%% *}"
         [tar]="${BINARY_TAR%% *}"
         [unzip]="${BINARY_UNZIP%% *}"
     )
@@ -305,7 +305,7 @@ preflight(){
             die "Could not find \`${key}\` - Check your configuration"
         fi
         printf "[DEBUG] \`%s\` okay\n" "${BinaryName}" >&3 2>&1
-    done   
+    done
 }
 
 # shellcheck disable=SC2120
@@ -323,7 +323,7 @@ cat(){
 }
 
 command_add(){
-  # get config 
+  # get config
   printf "add!\n"
   return 0
 }
@@ -384,7 +384,7 @@ main(){
     show_version
     return "$?"
   fi
- 
+
   if [[ -z "${argv[0]}" ]] || \
      [[ "${argv[0]}" == "-h" ]] || \
      [[ "${argv[0]}" == "--help" ]] || \
