@@ -9,8 +9,10 @@
 ## CONSTANTS
 __VERSION__="0.0.1"
 readonly __VERSION__
+
 __NAME__="spkg"
 readonly __NAME__
+
 __DESCRIPTION__="A simple package manager"
 readonly __DESCRIPTION__
 ## END CONSTANTS
