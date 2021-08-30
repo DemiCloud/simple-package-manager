@@ -489,8 +489,8 @@ main(){
   local argv
   # argc is the count of arguments
   local argc
-  local debug_level
-  local verbose_level
+  # local debug_level    # Temporarily disable until ready implement
+  # local verbose_leve   # Temporarily disable until ready implementl
   local subcommand
   local return_value
   return_value="0"
@@ -562,15 +562,15 @@ main(){
         subcommand="list"
         break
       ;;
-      "-d"|"--debug")
-        ((debug_level++))
-        ;;
+      # "-d"|"--debug")        # Temporarily disable until ready implement
+      #   ((debug_level++))    # Temporarily disable until ready implement
+      #   ;;
       --debug=?*)
         debug_level="${1#*=}"
         ;;
-      "-v"|"--verbose")
-        ((verbose_level++))
-        ;;
+      # "-v"|"--verbose")      # Temporarily disable until ready implement
+      #   ((verbose_level++))  # Temporarily disable until ready implement
+      #   ;;
       --)              # End of all options.
         shift
         break
