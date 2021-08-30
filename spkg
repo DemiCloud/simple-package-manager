@@ -85,7 +85,7 @@ initialize_logging_system()
 shutdown()
 {
   for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
-    if ! eval "printf '\n' >&\$${FD}" ; then
+    if ! eval "printf '' >&\$${FD}" ; then
       if ! eval "exec ${FD}>&-" ; then
         printf 'Failed to shutdown fd%s\n' "${FD}" >&2
       fi
