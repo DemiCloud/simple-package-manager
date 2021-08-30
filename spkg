@@ -636,11 +636,10 @@ application_cleanup()
 ################################################################################
 # Entrypoint commands
 ################################################################################
+trap application_cleanup EXIT
 initialize_logging_system
 
 set_logging_level "WARNING"
 
 main "$@"
-
-trap application_cleanup EXIT
 
