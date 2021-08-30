@@ -584,7 +584,9 @@ main(){
     shift
   done
 
-  set_logging_level "${debug_level}"
+  if [[ -n "${debug_level}" ]]; then
+    set_logging_level "${debug_level}"
+  fi
 
   for file in "${CONFIG_FILES[@]}"; do
     # Check if file exists, source it, then break. Ensure only the first found
