@@ -596,7 +596,8 @@ main(){
       #   ((verbose_level++))  # Temporarily disable until ready implement
       #   ;;
 
-      --)              # End of all options.
+      --)
+        # End of all options.
         shift
         break
         ;;
