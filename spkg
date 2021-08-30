@@ -518,6 +518,7 @@ main(){
 
   # Handle compressed short options
   re="(^| )\\-[[:alnum:]]{2,}"; # regex to detect shortoptions
+  readonly re
   # we evaluate this as a long string, thus ${argv[*]}, instead of ${argv[@]}
   if [[ "${argv[*]}" =~ $re ]]; then
     compiled_args=()
