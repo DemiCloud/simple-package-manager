@@ -579,7 +579,8 @@ main(){
       -?*)
         printf 'WARN: Unknown option (ignored): %s\n' "$1" >&"${WARNING}"
         ;;
-      *)        # Default case: No more options, so break out of the loop.
+      *)
+        # No more options, so break out of the loop.
         break
     esac
     shift
