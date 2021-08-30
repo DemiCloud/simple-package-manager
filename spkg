@@ -377,10 +377,12 @@ git_latest_release() {
     sed -E 's/.*"([^"]+)".*/\1/'                             # Pluck JSON value
 }
 
+
 _wget(){
   true
   #TODO: add code to differentiate between wget and curl
 }
+
 
 _curl() {
   #TODO: add code to differentiate between wget and curl
@@ -388,6 +390,7 @@ _curl() {
   # busybox wget only has the short options
   ${BINARY_WGET} -q -O - "${1}"
 }
+
 
 apply_shell_expansion() {
   local file
@@ -400,6 +403,7 @@ apply_shell_expansion() {
   _command="cat <<$delimiter"$'\n'"$data"$'\n'"$delimiter"
   eval "${_command}"
 }
+
 
 default_config(){
   cat <<_EOF_
@@ -415,10 +419,12 @@ BINARY_UNZIP="unzip"
 _EOF_
 }
 
+
 gen_default_config(){
   mkdir -p "${HOME}/.config/${NAME}/pkgs"
   default_config > "${HOME}/.config/${NAME}/${NAME}.conf"
 }
+
 
 eval "$(default_config)"
 
@@ -427,6 +433,7 @@ die(){
   printf "ERROR: %s\n" "${1}" >&2
   exit 1
 }
+
 
 preflight(){
     local -A Deps=(
@@ -445,6 +452,7 @@ preflight(){
     done
 }
 
+
 # shellcheck disable=SC2120
 cat(){
   IFS=''
@@ -459,21 +467,25 @@ cat(){
   fi
 }
 
+
 command_add(){
   # get config
   printf "add!\n"
   return 0
 }
 
+
 command_del(){
   printf "del!\n"
   return 0
 }
 
+
 command_update(){
   printf "update!\n"
   return 0
 }
+
 
 command_list(){
 
@@ -484,6 +496,7 @@ command_list(){
   printf "list!\n"
   return 0
 }
+
 
 main(){
   local argv
@@ -519,6 +532,7 @@ main(){
   # Handle compressed short options
   re="(^| )\\-[[:alnum:]]{2,}"; # regex to detect shortoptions
   readonly re
+
   # we evaluate this as a long string, thus ${argv[*]}, instead of ${argv[@]}
   if [[ "${argv[*]}" =~ $re ]]; then
     compiled_args=()
@@ -530,11 +544,14 @@ main(){
         done
         shift
         compiled_args+=("$@")
+
         ## recurse
         "${FUNCNAME[0]}" "${compiled_args[@]}"
+
         ## we "pass" the exit code back up the recursions
         return $?;
       fi
+
       compiled_args+=("${argv[$i]}");
       shift;
     done
@@ -548,37 +565,46 @@ main(){
         subcommand="add"
         break
       ;;
+
       "del")
         shift
         subcommand="del"
         break
       ;;
+
       "update")
         shift
         subcommand="update"
         break
       ;;
+
       "list")
         shift
         subcommand="list"
         break
       ;;
+
       # "-d"|"--debug")        # Temporarily disable until ready implement
       #   ((debug_level++))    # Temporarily disable until ready implement
       #   ;;
+
       --debug=?*)
         debug_level="${1#*=}"
         ;;
+
       # "-v"|"--verbose")      # Temporarily disable until ready implement
       #   ((verbose_level++))  # Temporarily disable until ready implement
       #   ;;
+
       --)              # End of all options.
         shift
         break
         ;;
+
       -?*)
         printf 'WARN: Unknown option (ignored): %s\n' "$1" >&"${WARNING}"
         ;;
+
       *)
         # No more options, so break out of the loop.
         break
