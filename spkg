@@ -5,7 +5,8 @@
 # Style Guide: https://google.github.io/styleguide/shellguide.html
 
 ################################################################################
-#######################################
+
+################################################################################
 ## CONSTANTS
 __VERSION__="0.0.1"
 readonly __VERSION__
@@ -16,7 +17,8 @@ readonly __NAME__
 __DESCRIPTION__="A simple package manager"
 readonly __DESCRIPTION__
 ## END CONSTANTS
-#######################################
+################################################################################
+
 
 # These are checked in order of precedence
 CONFIG_FILES=(
@@ -25,7 +27,8 @@ CONFIG_FILES=(
   "/etc/${__NAME__}/${__NAME__}.conf"
 )
 
-#######################################
+
+################################################################################
 # Prints program version
 # Globals:
 #   __NAME__
@@ -34,14 +37,14 @@ CONFIG_FILES=(
 #   NONE
 # Returns:
 #   NONE
-#######################################
+################################################################################
 show_version() {
   printf '%s %s\n' "${__NAME__}" "${__VERSION__}"
   return
 }
 
 
-#######################################
+################################################################################
 # Initializes the logging system
 # Globals:
 #   Creates a set of file descriptors
@@ -55,7 +58,7 @@ show_version() {
 #   None
 # Returns:
 #   None
-#######################################
+################################################################################
 initialize_logging_system()
 {
   for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
@@ -69,7 +72,7 @@ initialize_logging_system()
 }
 
 
-#######################################
+################################################################################
 # Shutdown the logging system
 # Globals:
 #   Closes the set of file descriptors
@@ -78,7 +81,7 @@ initialize_logging_system()
 #   None
 # Returns:
 #   None
-#######################################
+################################################################################
 shutdown()
 {
   for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
@@ -93,7 +96,7 @@ shutdown()
 }
 
 
-#######################################
+################################################################################
 # Convert logging levels to numbers
 # Globals:
 #   Used the set of file descriptors
@@ -109,7 +112,7 @@ shutdown()
 #       FATAL         50
 # Returns:
 #   Level Number: Integer
-#######################################
+################################################################################
 logging_name_to_level_number()
 {
   if (( $# != 1 )); then
@@ -153,7 +156,7 @@ logging_name_to_level_number()
 }
 
 
-#######################################
+################################################################################
 # Set the logging level
 # Globals:
 #   Used the set of file descriptors
@@ -181,7 +184,7 @@ logging_name_to_level_number()
 #   initialize_logging_system
 #   trap shutdown EXIT
 #   set_logging_level WARNING
-#######################################
+################################################################################
 set_logging_level()
 {
   if (( $# != 1 )); then
@@ -223,7 +226,7 @@ set_logging_level()
 }
 
 
-#######################################
+################################################################################
 # Parse a delimated string, and returns a globally parsable array
 # Globals:
 #   NONE
@@ -231,7 +234,7 @@ set_logging_level()
 #   $1: delimated string
 # Returns:
 #   newline delimated string
-#######################################
+################################################################################
 parse_to_array() {
   local string
   string="$1"
@@ -273,7 +276,7 @@ parse_to_array() {
 }
 
 
-#######################################
+################################################################################
 # Prints help
 # Globals:
 #   __NAME__
@@ -282,7 +285,7 @@ parse_to_array() {
 #     The help section to display
 # Returns:
 #   NONE
-#######################################
+################################################################################
 # shellcheck disable=SC2120
 show_help() {
 
@@ -334,7 +337,7 @@ _EOF_
 }
 
 
-#######################################
+################################################################################
 # Converts string to lowercase
 # Globals:
 #   None
@@ -343,12 +346,13 @@ _EOF_
 #     string to convert
 # Returns:
 #   string
-#######################################
+################################################################################
 to_lower() {
   printf "%s" "${*,,}"
 }
 
-#######################################
+
+################################################################################
 # Converts string to uppercase
 # Globals:
 #   None
@@ -357,10 +361,11 @@ to_lower() {
 #     string to convert
 # Returns:
 #   string
-#######################################
+################################################################################
 to_upper() {
   printf "%s" "${*^^}"
 }
+
 
 # TODO: add proper function header
 # TODO: try to remove dependencies, replace with pure bash
@@ -619,15 +624,18 @@ _EOF_
 }
 
 
-#######################################
+################################################################################
 # Clean up resources
-#######################################
+################################################################################
 application_cleanup()
 {
     shutdown
 }
 
 
+################################################################################
+# Entrypoint commands
+################################################################################
 initialize_logging_system
 
 set_logging_level "WARNING"
