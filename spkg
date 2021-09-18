@@ -20,14 +20,12 @@ readonly __DESCRIPTION__
 ## END CONSTANTS
 ################################################################################
 
-
 # These are checked in order of precedence
 CONFIG_FILES=(
   "./${__NAME__}.conf"
   "${HOME}/.config/${__NAME__}/${__NAME__}.conf"
   "/etc/${__NAME__}/${__NAME__}.conf"
 )
-
 
 ################################################################################
 # Prints program version
@@ -44,7 +42,6 @@ show_version() {
   return
 }
 
-
 ################################################################################
 # Initializes the logging system
 # Globals:
@@ -60,8 +57,7 @@ show_version() {
 # Returns:
 #   None
 ################################################################################
-initialize_logging_system()
-{
+initialize_logging_system() {
   for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
     # https://stackoverflow.com/a/8297755/2628314
     if ! eval "exec ${FD}>/dev/null"; then
@@ -71,7 +67,6 @@ initialize_logging_system()
   done
   return 0
 }
-
 
 ################################################################################
 # Shutdown the logging system
@@ -83,8 +78,7 @@ initialize_logging_system()
 # Returns:
 #   None
 ################################################################################
-shutdown()
-{
+shutdown() {
   for FD in '{DEBUG}' '{INFORMATION}' '{WARNING}' '{ERROR}' '{FATAL}'; do
     if ! eval "printf '' >&\$${FD}" 2>/dev/null; then
       if ! eval "exec ${FD}>&-" 2>/dev/null; then
@@ -95,7 +89,6 @@ shutdown()
 
   return 0
 }
-
 
 ################################################################################
 # Convert logging levels to numbers
@@ -114,35 +107,34 @@ shutdown()
 # Returns:
 #   Level Number: Integer
 ################################################################################
-logging_name_to_level_number()
-{
-  if (( $# != 1 )); then
+logging_name_to_level_number() {
+  if (($# != 1)); then
     printf 'logging_name_to_level_number must be called with a logging level. Aborting\n' >&2
     exit 1
   fi
 
   case "$1" in
-    OFF|0)
+    OFF | 0)
       printf '0\n'
       ;;
 
-    DEBUG|10)
+    DEBUG | 10)
       printf '10\n'
       ;;
 
-    INFORMATION|20)
+    INFORMATION | 20)
       printf '20\n'
       ;;
 
-    WARNING|30)
+    WARNING | 30)
       printf '30\n'
       ;;
 
-    ERROR|40)
+    ERROR | 40)
       printf '40\n'
       ;;
 
-    FATAL|50)
+    FATAL | 50)
       printf '50\n'
       ;;
 
@@ -155,7 +147,6 @@ logging_name_to_level_number()
 
   return 0
 }
-
 
 ################################################################################
 # Set the logging level
@@ -186,9 +177,8 @@ logging_name_to_level_number()
 #   trap shutdown EXIT
 #   set_logging_level WARNING
 ################################################################################
-set_logging_level()
-{
-  if (( $# != 1 )); then
+set_logging_level() {
+  if (($# != 1)); then
     printf 'set_logging_level must be called with a logging level. Aborting\n' >&2
     exit 1
   fi
@@ -207,7 +197,7 @@ set_logging_level()
   fi
 
   # No logging messages should be emitted
-  if (( LevelNumber == 0 )); then
+  if ((LevelNumber == 0)); then
     return 0
   fi
 
@@ -217,7 +207,7 @@ set_logging_level()
       exit 1
     fi
 
-    if (( TransposedLevelNumber >= LevelNumber )); then
+    if ((TransposedLevelNumber >= LevelNumber)); then
       if ! eval "exec {${FD}}>&2"; then
         printf 'failed to redirect FD%s\n' "${FD}" >&2
       fi
@@ -225,7 +215,6 @@ set_logging_level()
   done
   return 0
 }
-
 
 ################################################################################
 # Parse a delimated string, and returns a globally parsable array
@@ -275,7 +264,6 @@ parse_to_array() {
   printf "%s\n" "${return_array[@]## }"
   return 0
 }
-
 
 ################################################################################
 # Prints help
@@ -337,7 +325,6 @@ _EOF_
   return 0
 }
 
-
 ################################################################################
 # Converts string to lowercase
 # Globals:
@@ -351,7 +338,6 @@ _EOF_
 to_lower() {
   printf "%s" "${*,,}"
 }
-
 
 ################################################################################
 # Converts string to uppercase
@@ -367,22 +353,19 @@ to_upper() {
   printf "%s" "${*^^}"
 }
 
-
 # TODO: add proper function header
 # TODO: try to remove dependencies, replace with pure bash
 git_latest_release() {
   # Get latest release from GitHub api
   _curl "https://api.github.com/repos/$1/releases/latest" |
-    grep '"tag_name":' |                                     # Get tag line
-    sed -E 's/.*"([^"]+)".*/\1/'                             # Pluck JSON value
+    grep '"tag_name":' |         # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/' # Pluck JSON value
 }
 
-
-_wget(){
+_wget() {
   true
   #TODO: add code to differentiate between wget and curl
 }
-
 
 _curl() {
   #TODO: add code to differentiate between wget and curl
@@ -391,21 +374,19 @@ _curl() {
   ${BINARY_WGET} -q -O - "${1}"
 }
 
-
 apply_shell_expansion() {
   local file
   local data
   local delimiter
   local _command
   file="$1"
-  data=$(< "$file")
+  data=$(<"$file")
   delimiter="__apply_shell_expansion_delimiter__"
   _command="cat <<$delimiter"$'\n'"$data"$'\n'"$delimiter"
   eval "${_command}"
 }
 
-
-default_config(){
+default_config() {
   cat <<_EOF_
 DIRECTORY_BIN="\${HOME}/.local/bin"
 DIRECTORY_MAN="\${HOME}/.local/share/man"
@@ -419,75 +400,66 @@ BINARY_UNZIP="unzip"
 _EOF_
 }
 
-
-gen_default_config(){
+gen_default_config() {
   mkdir -p "${HOME}/.config/${NAME}/pkgs"
-  default_config > "${HOME}/.config/${NAME}/${NAME}.conf"
+  default_config >"${HOME}/.config/${NAME}/${NAME}.conf"
 }
-
 
 eval "$(default_config)"
 
-
-die(){
+die() {
   printf "ERROR: %s\n" "${1}" >&2
   exit 1
 }
 
+preflight() {
+  local -A Deps=(
+    [wget]="${BINARY_WGET%% *}"
+    [tar]="${BINARY_TAR%% *}"
+    [unzip]="${BINARY_UNZIP%% *}"
+  )
 
-preflight(){
-    local -A Deps=(
-        [wget]="${BINARY_WGET%% *}"
-        [tar]="${BINARY_TAR%% *}"
-        [unzip]="${BINARY_UNZIP%% *}"
-    )
-
-    for key in "${!Deps[@]}"; do
-        BinaryName="${Deps[$key]}"
-        printf "[DEBUG] Checking dependency \`%s\`\n" "${key}" >&"${DEBUG}"
-        if ! command -V "${BinaryName}" >/dev/null; then
-            die "Could not find \`${key}\` - Check your configuration"
-        fi
-        printf "[DEBUG] \`%s\` okay\n" "${BinaryName}" >&"${DEBUG}"
-    done
+  for key in "${!Deps[@]}"; do
+    BinaryName="${Deps[$key]}"
+    printf "[DEBUG] Checking dependency \`%s\`\n" "${key}" >&"${DEBUG}"
+    if ! command -V "${BinaryName}" >/dev/null; then
+      die "Could not find \`${key}\` - Check your configuration"
+    fi
+    printf "[DEBUG] \`%s\` okay\n" "${BinaryName}" >&"${DEBUG}"
+  done
 }
 
-
 # shellcheck disable=SC2120
-cat(){
+cat() {
   IFS=''
   if [[ -z "$*" ]]; then
     mapfile -d '' data
     printf "%s" "${data[0]}"
   else
     for i in "$@"; do
-      mapfile -d '' data < "${i}"
+      mapfile -d '' data <"${i}"
       printf "%s" "${data[0]}"
     done
   fi
 }
 
-
-command_add(){
+command_add() {
   # get config
   printf "add!\n"
   return 0
 }
 
-
-command_del(){
+command_del() {
   printf "del!\n"
   return 0
 }
 
-
-command_update(){
+command_update() {
   printf "update!\n"
   return 0
 }
 
-
-command_list(){
+command_list() {
 
   # OPTIONS
   # all - all configured
@@ -497,8 +469,7 @@ command_list(){
   return 0
 }
 
-
-main(){
+main() {
   local argv
   # argc is the count of arguments
   local argc
@@ -508,38 +479,37 @@ main(){
   local return_value
   return_value="0"
 
-
   argv=("$@")
   argc=${#argv[@]}
 
-  shopt -s extglob;
+  shopt -s extglob
 
-  if [[ "${argv[0]}" == "-V" ]] || \
-     [[ "${argv[0]}" == "--version" ]] || \
-     [[ "${argv[0]}" == "version" ]]; then
+  if [[ "${argv[0]}" == "-V" ]] ||
+    [[ "${argv[0]}" == "--version" ]] ||
+    [[ "${argv[0]}" == "version" ]]; then
     show_version
     return "$?"
   fi
 
-  if [[ -z "${argv[0]}" ]] || \
-     [[ "${argv[0]}" == "-h" ]] || \
-     [[ "${argv[0]}" == "--help" ]] || \
-     [[ "${argv[0]}" == "help" ]]; then
+  if [[ -z "${argv[0]}" ]] ||
+    [[ "${argv[0]}" == "-h" ]] ||
+    [[ "${argv[0]}" == "--help" ]] ||
+    [[ "${argv[0]}" == "help" ]]; then
     show_help
     return "$?"
   fi
 
   # Handle compressed short options
-  re="(^| )\\-[[:alnum:]]{2,}"; # regex to detect shortoptions
+  re="(^| )\\-[[:alnum:]]{2,}" # regex to detect shortoptions
   readonly re
 
   # we evaluate this as a long string, thus ${argv[*]}, instead of ${argv[@]}
   if [[ "${argv[*]}" =~ $re ]]; then
     compiled_args=()
-    for ((i=0; i<argc; i++)); do
+    for ((i = 0; i < argc; i++)); do
       if [[ "${argv[$i]}" =~ $re ]]; then
         compressed_args="${argv[$i]#*-}"
-        for ((r=0; r<${#compressed_args}; r++)); do
+        for ((r = 0; r < ${#compressed_args}; r++)); do
           compiled_args+=("-${compressed_args:$r:1}")
         done
         shift
@@ -549,13 +519,13 @@ main(){
         "${FUNCNAME[0]}" "${compiled_args[@]}"
 
         ## we "pass" the exit code back up the recursions
-        return $?;
+        return $?
       fi
 
-      compiled_args+=("${argv[$i]}");
-      shift;
+      compiled_args+=("${argv[$i]}")
+      shift
     done
-    return 0;
+    return 0
   fi
 
   while :; do
@@ -564,25 +534,25 @@ main(){
         shift
         subcommand="add"
         break
-      ;;
+        ;;
 
       "del")
         shift
         subcommand="del"
         break
-      ;;
+        ;;
 
       "update")
         shift
         subcommand="update"
         break
-      ;;
+        ;;
 
       "list")
         shift
         subcommand="list"
         break
-      ;;
+        ;;
 
       # "-d"|"--debug")        # Temporarily disable until ready implement
       #   ((debug_level++))    # Temporarily disable until ready implement
@@ -609,6 +579,7 @@ main(){
       *)
         # No more options, so break out of the loop.
         break
+        ;;
     esac
     shift
   done
@@ -655,15 +626,12 @@ _EOF_
   exit "${return_value}"
 }
 
-
 ################################################################################
 # Clean up resources
 ################################################################################
-application_cleanup()
-{
-    shutdown
+application_cleanup() {
+  shutdown
 }
-
 
 ################################################################################
 # Entrypoint commands
@@ -674,4 +642,3 @@ initialize_logging_system
 set_logging_level "WARNING"
 
 main "$@"
-
