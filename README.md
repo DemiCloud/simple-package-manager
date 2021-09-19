@@ -1,6 +1,6 @@
 # simple-package-manager
 
-For the times when users need to aquire resources for which there is no package management solution,
+For the times when users need to acquire resources for which there is no package management solution,
 *simple package manager* facilitates basic package management of a community curated set of packages.
 
 
@@ -50,7 +50,7 @@ In order to ensure that we always ship a functioning utility which is reliable a
 - adhere to our code-quality standards
 (currently, the [Google Bash Style Guide](https://sites.google.com/view/kbocdfydah/google-bash-style-guide))
 
-**Every commit must deliver a functioning executable without exception**.  This does not neccessarily
+**Every commit must deliver a functioning executable without exception**.  This does not necessarily
 mean a functional change or feature update to `spkg` is included, but the commit must always deliver
 a functioning executable so that the repo can be checked-out at any point in it's history with the
 expectation of not 'breaking' the utility.  If your single feature is split across multiple commits, 
@@ -69,11 +69,11 @@ Frivolous commits for magic internet beans are not welcome.
 
 ### Contribution check-list
 
-1. Has the maintenaince team accepted your issue and sanctioned a forth-coming pull request?
+1. Has the maintenance team accepted your issue and sanctioned a forth-coming pull request?
 2. Does your commit add a single feature?
 3. Is the commit message descriptive, and helpful?
 4. If the contribution is complex, is it well documented for future maintainers?
-5. Does the new functionality use the logging system to ensure runtime logging verbosity can be acheived if desired?
+5. Does the new functionality use the logging system to ensure run-time logging verbosity can be achieved if desired?
 6. Do variables names clearly express their purpose?
 7. Do the linting and code-quality tools report zero warnings and errors?
 
