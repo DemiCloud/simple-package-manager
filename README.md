@@ -78,6 +78,23 @@ Frivolous commits for magic internet beans are not welcome.
 7. Do the linting and code-quality tools report zero warnings and errors?
 
 
+### git hooks
+
+The repository has a hooks directory which `git` can be configured to use by executing:
+
+```
+git config core.hooksPath hooks
+```
+
+A **pre-commit hook** is supplied to:
+
+- analyse project bash files with `shellcheck` and `shfmt`
+- analyse README.md using `aspell`
+
+This will assist in preventing malformed files from being committed.  The hook requires a true-colour terminal.
+Test your terminal with: `printf 'If the following word is coloured red: \x1b[38;2;255;0;0mcolour!\x1b[0m\n'`
+
+
 ## Contact us
 
 - Join the [Bash Discord Server](https://discord.gg/aD88NDdCrm)
