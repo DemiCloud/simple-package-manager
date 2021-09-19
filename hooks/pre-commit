@@ -1,0 +1,182 @@
+#!/bin/bash
+# -*- coding: utf-8 -*-
+
+# Pre-commit
+#
+# Execute checker on the bash executables
+#
+
+# Git does not run hooks in an interactive terminal
+exec </dev/tty
+
+exec 1>&2
+
+# Globals
+declare -r TrueColourGreen='\x1b[38;2;80;247;108m'
+declare -r TrueColourRed='\x1b[38;2;227;33;46m'
+declare -r TrueColourBlue='\x1b[38;2;124;183;255m'
+declare -r TrueColourYellow='\x1b[38;2;249;220;92m'
+declare -r TrueColourReset='\x1b[0m'
+
+declare -r Tick='✅'
+declare -r Cross='❌'
+
+Errs=0
+shellcheck_found=0
+shfmt_found=0
+aspell_found=0
+
+declare -a bash_executables=(
+  ./spkg
+  ./hooks/pre-commit
+)
+
+declare -a markdown_files=(
+  ./README.md
+)
+
+declare -a Summary
+
+# Functions
+echo_information() {
+  printf "${TrueColourBlue}Information:${TrueColourReset} %s\n" "$*" >&2
+  return
+}
+
+echo_warning() {
+  printf '\x1b[31mWarning!\x1b[0m %s\n' "$*" >&2
+  return
+}
+
+echo_error() {
+  printf '\x1b[31mError!\x1b[0m %s\n' "$*" >&2
+  return
+}
+
+echo_pass() {
+  printf "%s %b %b %s\n" "${Tick}" "${TrueColourGreen}Passed${TrueColourReset}" "${TrueColourBlue}${1}${TrueColourReset}" "${2}"
+  return
+}
+
+echo_fail() {
+  printf '%s %b %b %s\n' "${Cross}" "${TrueColourRed}Failed${TrueColourReset}" "${TrueColourBlue}${1}${TrueColourReset}" "${2}"
+  return
+}
+
+fn_check_dependencies() {
+  if command -v shellcheck &>/dev/null; then
+    ((shellcheck_found++))
+  else
+    Summary+=("$(echo_warning 'shellcheck not found' 2>&1)")
+  fi
+
+  if command -v shfmt &>/dev/null; then
+    ((shfmt_found++))
+  else
+    Summary+=("$(echo_warning 'shfmt not found' 2>&1)")
+  fi
+
+  if command -v aspell &>/dev/null; then
+    ((aspell_found++))
+  else
+    Summary+=("$(echo_warning 'aspell not found' 2>&1)")
+  fi
+
+  readonly shellcheck_found
+  readonly shfmt_found
+  readonly aspell_found
+
+  return 0
+}
+
+fn_process_bash_file() {
+
+  local l_errors
+  l_errors=0
+
+  local bash_executable
+  bash_executable="$1"
+  readonly bash_executable
+
+  echo_information "Processing ${bash_executable}"
+
+  if ((shellcheck_found > 0)); then
+    echo_information "- shellcheck"
+    if shellcheck "${bash_executable}"; then
+      Summary+=("$(echo_pass "${bash_executable}" "shellcheck")")
+    else
+      Summary+=("$(echo_fail "${bash_executable}" "shellcheck")")
+      ((l_errors++))
+    fi
+  fi
+
+  if ((shfmt_found > 0)); then
+    echo_information "- shfmt"
+    if shfmt -d -ci -i 2 "${bash_executable}"; then
+      Summary+=("$(echo_pass "${bash_executable}" "shfmt")")
+    else
+      Summary+=("$(echo_fail "${bash_executable}" "shfmt")")
+      ((l_errors++))
+    fi
+  fi
+
+  ((Errs += l_errors))
+
+  if ((l_errors > 0)); then
+    echo_error "${bash_executable}"
+    return 1
+  fi
+  return 0
+}
+
+fn_process_markdown_file() {
+  local l_errors
+  l_errors=0
+
+  local markdown_file
+  markdown_file="$1"
+  readonly markdown_file
+
+  if ((aspell_found > 0)); then
+    echo_information "Processing ${markdown_file}"
+    if aspell --mode=markdown -c "${markdown_file}"; then
+      Summary+=("$(echo_pass "${markdown_file}" "aspell")")
+    else
+      Summary+=("$(echo_fail "${markdown_file}" "aspell")")
+      ((l_errors++))
+    fi
+  fi
+
+  ((Errs += l_errors))
+
+  if ((l_errors > 0)); then
+    echo_error "${markdown_file}"
+    return 1
+  fi
+  return 0
+}
+
+# Begin
+fn_check_dependencies
+
+for bash_executable in "${bash_executables[@]}"; do
+  fn_process_bash_file "${bash_executable}"
+done
+
+for markdown_file in "${markdown_files[@]}"; do
+  fn_process_markdown_file "${markdown_file}"
+done
+
+# Summary
+printf '\n%b%s%b\n' "${TrueColourYellow}" '============ Summary ============' "${TrueColourReset}"
+for result in "${Summary[@]}"; do
+  printf '%s\n' "${result}"
+done
+printf '%b%s%b\n' "${TrueColourYellow}" '=================================' "${TrueColourReset}"
+
+# End
+if ((Errs > 0)); then
+  exit 1
+fi
+
+exit 0
